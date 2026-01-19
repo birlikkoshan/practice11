@@ -1,0 +1,18 @@
+{
+  "name": "practice11",
+  "version": "1.0.0",
+  "description": "Practice Task 11 (Week 7): Deployment + Git (Node.js + Express + MongoDB)",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "mongodb": "^7.0.0"
+  }
+}
+
