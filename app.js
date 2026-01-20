@@ -5,11 +5,9 @@ const { MongoClient, ObjectId } = require("mongodb");
 
 const app = express();
 
-// Env vars (required by the rubric)
 const PORT = Number(process.env.PORT) || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// You can keep these as constants; only secrets must be in env vars
 const DB_NAME = "shop";
 const COLLECTION_NAME = "products";
 
@@ -19,7 +17,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Always return JSON (including invalid JSON body errors)
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
     return res.status(400).json({ error: "Invalid JSON body" });
@@ -217,7 +214,6 @@ async function start() {
     res.status(404).json({ error: "API endpoint not found" });
   });
 
-  // Fallback error handler (JSON only)
   app.use((err, req, res, next) => {
     console.error("Unhandled error:", err);
     res.status(500).json({ error: "Internal server error" });

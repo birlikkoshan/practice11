@@ -1,4 +1,4 @@
-# Practice Task 11 (Week 7): Deployment + Git
+# Practice Task 11
 
 This is a Node.js + Express + MongoDB REST API.
 
@@ -7,7 +7,7 @@ This is a Node.js + Express + MongoDB REST API.
 - **No hardcoded secrets** in code
 - **MongoDB mandatory** (uses `mongodb` driver)
 - All responses are **JSON**
-- Required endpoints exist:
+- Endpoints:
   - `GET /`
   - `GET /api/products`
   - `GET /api/products/:id`
@@ -16,20 +16,7 @@ This is a Node.js + Express + MongoDB REST API.
   - `DELETE /api/products/:id`
 
 ## Local setup
-1. Install:
-   - `npm install`
-2. Create a `.env` file (DO NOT commit it):
+`.env`:
    - `PORT=3000`
    - `MONGO_URI=...`
-
-Template file: `env.example`
-
-3. Run:
-   - `npm start`
-
-## Deployment notes
-- Make sure the host sets:
-  - `MONGO_URI`
-  - `PORT` (most platforms set this automatically)
-- Start command is `npm start`
 
