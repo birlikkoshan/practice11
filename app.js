@@ -64,6 +64,7 @@ async function start() {
       ok: true,
       service: "practice11-api",
       endpoints: {
+        version: "GET /version",
         products: {
           list: "GET /api/products",
           getById: "GET /api/products/:id",
