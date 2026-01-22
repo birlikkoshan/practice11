@@ -48,7 +48,14 @@ async function start() {
     process.exit(1);
   }
 
-  const client = new MongoClient(MONGO_URI);
+  const mongoOptions = {
+    tls: true,
+    retryWrites: true,
+    maxPoolSize: 10,
+    serverSelectionTimeoutMS: 5000,
+  };
+
+  const client = new MongoClient(MONGO_URI, mongoOptions);
   try {
     await client.connect();
     const db = client.db(DB_NAME);
@@ -76,12 +83,12 @@ async function start() {
     });
   });
 
-  app.get("/version", (req, res) => {
-    res.json({
-      version: "1.1",
-      updatedAt: "2026-01-18"
-    });
-  });
+  // app.get("/version", (req, res) => {
+  //   res.json ({
+  //     version: "1.1",
+  //     updatedAt: "2026-01-18"
+  //   });
+  // });
 
   app.get("/api/products", async (req, res) => {
     const col = getCollectionOrFail(res);
