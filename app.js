@@ -83,12 +83,12 @@ async function start() {
     });
   });
 
-  // app.get("/version", (req, res) => {
-  //   res.json ({
-  //     version: "1.1",
-  //     updatedAt: "2026-01-18"
-  //   });
-  // });
+  app.get("/version", (req, res) => {
+    res.json ({
+      version: "1.1",
+      updatedAt: "2026-01-18"
+    });
+  });
 
   app.get("/api/products", async (req, res) => {
     const col = getCollectionOrFail(res);
