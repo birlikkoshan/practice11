@@ -1,7 +1,9 @@
 require("dotenv").config();
 
 const express = require("express");
-const { MongoClient, ObjectId } = require("mongodb");
+const { MongoClient } = require("mongodb");
+const { router: productsRouter, setProductsCollection } = require("./routes/products");
+const { router: itemsRouter, setItemsCollection } = require("./routes/items");
 
 const app = express();
 
@@ -10,6 +12,7 @@ const MONGO_URI = process.env.MONGO_URI;
 
 const DB_NAME = "shop";
 const COLLECTION_NAME = "products";
+const ITEMS_COLLECTION_NAME = "items";
 
 app.use(express.json());
 app.use((req, res, next) => {
@@ -23,24 +26,6 @@ app.use((err, req, res, next) => {
   }
   return next(err);
 });
-
-function getCollectionOrFail(res) {
-  if (!productsCollection) {
-    res.status(503).json({ error: "Database not ready" });
-    return null;
-  }
-  return productsCollection;
-}
-
-function parseObjectIdOr400(id, res) {
-  if (!ObjectId.isValid(id)) {
-    res.status(400).json({ error: "Invalid id" });
-    return null;
-  }
-  return new ObjectId(id);
-}
-
-let productsCollection;
 
 async function start() {
   if (!MONGO_URI) {
@@ -59,7 +44,13 @@ async function start() {
   try {
     await client.connect();
     const db = client.db(DB_NAME);
-    productsCollection = db.collection(COLLECTION_NAME);
+    const productsCollection = db.collection(COLLECTION_NAME);
+    const itemsCollection = db.collection(ITEMS_COLLECTION_NAME);
+    
+    // Pass collections to routers
+    setProductsCollection(productsCollection);
+    setItemsCollection(itemsCollection);
+    
     console.log("Connected to MongoDB");
   } catch (err) {
     console.error("MongoDB connection error:", err);
@@ -78,156 +69,36 @@ async function start() {
           create: "POST /api/products",
           update: "PUT /api/products/:id",
           delete: "DELETE /api/products/:id"
+        },
+        items: {
+          list: "GET /api/items",
+          getById: "GET /api/items/:id",
+          create: "POST /api/items",
+          fullUpdate: "PUT /api/items/:id",
+          partialUpdate: "PATCH /api/items/:id",
+          delete: "DELETE /api/items/:id"
         }
       }
     });
   });
 
   app.get("/version", (req, res) => {
-    res.json ({
+    res.json({
       version: "1.1",
       updatedAt: "2026-01-18"
     });
   });
 
-  app.get("/api/products", async (req, res) => {
-    const col = getCollectionOrFail(res);
-    if (!col) return;
+  // Mount routers
+  app.use("/api/products", productsRouter);
+  app.use("/api/items", itemsRouter);
 
-    try {
-      const { category, minPrice, sort, fields } = req.query;
-
-      const filter = {};
-      if (category) filter.category = category;
-
-      if (minPrice !== undefined) {
-        const minPriceValue = Number(minPrice);
-        if (!Number.isNaN(minPriceValue)) {
-          filter.price = { $gte: minPriceValue };
-        }
-      }
-
-      let projection = undefined;
-      if (fields) {
-        projection = {};
-        const fieldList = String(fields)
-          .split(",")
-          .map((f) => f.trim())
-          .filter(Boolean);
-        for (const f of fieldList) projection[f] = 1;
-        projection._id = 1;
-      }
-
-      let query = col.find(filter);
-      if (projection) query = query.project(projection);
-      if (sort === "price") query = query.sort({ price: 1 });
-
-      const products = await query.toArray();
-      res.json(products);
-    } catch (error) {
-      console.error("Error fetching products:", error);
-      res.status(500).json({ error: "Internal server error" });
-    }
-  });
-
-  app.get("/api/products/:id", async (req, res) => {
-    const col = getCollectionOrFail(res);
-    if (!col) return;
-
-    const oid = parseObjectIdOr400(req.params.id, res);
-    if (!oid) return;
-
-    try {
-      const product = await col.findOne({ _id: oid });
-      if (!product) return res.status(404).json({ error: "Product not found" });
-      res.json(product);
-    } catch (err) {
-      res.status(500).json({ error: "Server error" });
-    }
-  });
-
-  app.post("/api/products", async (req, res) => {
-    const col = getCollectionOrFail(res);
-    if (!col) return;
-
-    const { name, price, category } = req.body ?? {};
-
-    if (!name || category === undefined || price === undefined) {
-      return res.status(400).json({ error: "Missing required fields: name, price, category" });
-    }
-
-    const priceNumber = Number(price);
-    if (Number.isNaN(priceNumber)) {
-      return res.status(400).json({ error: "Price must be a number" });
-    }
-
-    try {
-      const result = await col.insertOne({
-        name,
-        price: priceNumber,
-        category
-      });
-
-      res.status(201).json({
-        message: "Product created",
-        id: String(result.insertedId)
-      });
-    } catch (err) {
-      res.status(500).json({ error: "Server error" });
-    }
-  });
-
-  app.put("/api/products/:id", async (req, res) => {
-    const col = getCollectionOrFail(res);
-    if (!col) return;
-
-    const oid = parseObjectIdOr400(req.params.id, res);
-    if (!oid) return;
-
-    const { name, price, category } = req.body ?? {};
-    const update = {};
-
-    if (name !== undefined) update.name = name;
-    if (category !== undefined) update.category = category;
-    if (price !== undefined) {
-      const priceNumber = Number(price);
-      if (Number.isNaN(priceNumber)) return res.status(400).json({ error: "Price must be a number" });
-      update.price = priceNumber;
-    }
-
-    if (Object.keys(update).length === 0) {
-      return res.status(400).json({ error: "Provide at least one field to update: name, price, category" });
-    }
-
-    try {
-      const result = await col.updateOne({ _id: oid }, { $set: update });
-      if (result.matchedCount === 0) return res.status(404).json({ error: "Product not found" });
-      res.json({ message: "Product updated" });
-    } catch (err) {
-      res.status(500).json({ error: "Server error" });
-    }
-  });
-
-  app.delete("/api/products/:id", async (req, res) => {
-    const col = getCollectionOrFail(res);
-    if (!col) return;
-
-    const oid = parseObjectIdOr400(req.params.id, res);
-    if (!oid) return;
-
-    try {
-      const result = await col.deleteOne({ _id: oid });
-      if (result.deletedCount === 0) return res.status(404).json({ error: "Product not found" });
-      res.json({ message: "Product deleted" });
-    } catch (err) {
-      res.status(500).json({ error: "Server error" });
-    }
-  });
-
+  // 404 handler
   app.use((req, res) => {
     res.status(404).json({ error: "API endpoint not found" });
   });
 
+  // Error handler
   app.use((err, req, res, next) => {
     console.error("Unhandled error:", err);
     res.status(500).json({ error: "Internal server error" });
