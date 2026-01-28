@@ -5,6 +5,22 @@ const router = express.Router();
 
 let itemsCollection;
 
+const VALID_API_KEY = "practice-api-key-12345";
+
+function authenticateApiKey(req, res, next) {
+  const apiKey = req.headers["x-api-key"];
+
+  if (!apiKey) {
+    return res.status(401).json({ error: "Missing API key in headers" });
+  }
+
+  if (apiKey !== VALID_API_KEY) {
+    return res.status(401).json({ error: "Invalid API key" });
+  }
+
+  next();
+}
+
 function parseObjectIdOr400(id, res) {
   if (!ObjectId.isValid(id)) {
     res.status(400).json({ error: "Invalid id" });
@@ -51,7 +67,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST /api/items - create a new item
-router.post("/", async (req, res) => {
+router.post("/", authenticateApiKey, async (req, res) => {
   if (!itemsCollection) {
     return res.status(503).json({ error: "Database not ready" });
   }
@@ -80,7 +96,7 @@ router.post("/", async (req, res) => {
 });
 
 // PUT /api/items/:id - full update (replace item)
-router.put("/:id", async (req, res) => {
+router.put("/:id", authenticateApiKey, async (req, res) => {
   if (!itemsCollection) {
     return res.status(503).json({ error: "Database not ready" });
   }
@@ -113,7 +129,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // PATCH /api/items/:id - partial update
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", authenticateApiKey, async (req, res) => {
   if (!itemsCollection) {
     return res.status(503).json({ error: "Database not ready" });
   }
@@ -150,7 +166,7 @@ router.patch("/:id", async (req, res) => {
 });
 
 // DELETE /api/items/:id - delete an item
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateApiKey, async (req, res) => {
   if (!itemsCollection) {
     return res.status(503).json({ error: "Database not ready" });
   }
