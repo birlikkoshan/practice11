@@ -15,7 +15,7 @@ function authenticateApiKey(req, res, next) {
   }
 
   if (apiKey !== VALID_API_KEY) {
-    return res.status(401).json({ error: "Invalid API key" });
+    return res.status(403).json({ error: "Invalid API key" });
   }
 
   next();
